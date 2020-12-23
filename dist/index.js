@@ -39,16 +39,58 @@ function autobindthis(_target, _methodName, descriptor) {
     };
     return adjustedDescriptor;
 }
+class ProjectState {
+    constructor() {
+        this.listeners = [];
+        this.projects = [];
+    }
+    static getInstance() {
+        if (this.instance) {
+            return this.instance;
+        }
+        this.instance = new ProjectState();
+        return this.instance;
+    }
+    addListener(listenerFn) {
+        this.listeners.push(listenerFn);
+    }
+    addProject(t, d, numOfPeople) {
+        const newProject = {
+            id: Math.random().toString(),
+            title: t,
+            description: d,
+            people: numOfPeople,
+        };
+        this.projects.push(newProject);
+        for (const listenerFn of this.listeners) {
+            listenerFn(this.projects.slice());
+        }
+    }
+}
+const projectState = ProjectState.getInstance();
 class ProjectList {
     constructor(type) {
         this.type = type;
         this.templateElement = document.getElementById("project-list");
         this.hostElement = document.getElementById("app");
+        this.assignedProjects = [];
         const importedNode = document.importNode(this.templateElement.content, true);
         this.sectionElement = importedNode.firstElementChild;
         this.sectionElement.id = `${this.type}-projects`;
+        projectState.addListener((projects) => {
+            this.assignedProjects = projects;
+            this.renderProjects();
+        });
         this.attach();
         this.renderContent();
+    }
+    renderProjects() {
+        const listEl = document.getElementById(`${this.type}-projects-list`);
+        for (let project of this.assignedProjects) {
+            const item = document.createElement("li");
+            item.textContent = project.title;
+            listEl.appendChild(item);
+        }
     }
     renderContent() {
         const lisId = `${this.type}-projects-list`;
@@ -112,8 +154,9 @@ class ProjectInput {
         const userInput = this.gatherUserInput();
         if (Array.isArray(userInput)) {
             const [title, description, people] = userInput;
-            this.clearInputs();
+            projectState.addProject(title, description, people);
             console.log(title, description, people);
+            this.clearInputs();
         }
     }
     configure() {
