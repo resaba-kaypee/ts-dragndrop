@@ -76,6 +76,16 @@ class ProjectState extends State {
     addProject(t, d, numOfPeople) {
         const newProject = new Project(Math.random().toString(), t, d, numOfPeople, ProjectStatus.Active);
         this.projects.push(newProject);
+        this.updateListeners();
+    }
+    moveProject(projectId, newStatus) {
+        const project = this.projects.find((project) => projectId === project.id);
+        if (project && project.status !== newStatus) {
+            project.status = newStatus;
+            this.updateListeners();
+        }
+    }
+    updateListeners() {
         for (const listenerFn of this.listeners) {
             listenerFn(this.projects.slice());
         }
@@ -113,7 +123,8 @@ class ProjectItem extends Component {
         }
     }
     dragStartHandler(event) {
-        console.log(event);
+        event.dataTransfer.setData("text/plain", this.project.id);
+        event.dataTransfer.effectAllowed = "move";
     }
     dragEndHandler(_event) {
         console.log("drag end");
@@ -140,10 +151,16 @@ class ProjectList extends Component {
         this.renderContent();
     }
     dragOverhandler(event) {
-        const listEl = this.element.querySelector("ul");
-        listEl.classList.add("droppable");
+        if (event.dataTransfer && event.dataTransfer.types[0] === "text/plain") {
+            event.preventDefault();
+            const listEl = this.element.querySelector("ul");
+            listEl.classList.add("droppable");
+        }
     }
-    dropHandler(event) { }
+    dropHandler(event) {
+        const projectId = event.dataTransfer.getData("text/plain");
+        projectState.moveProject(projectId, this.type === "active" ? ProjectStatus.Active : ProjectStatus.Finished);
+    }
     dragLeaveHandler(event) {
         const listEl = this.element.querySelector("ul");
         listEl.classList.remove("droppable");
@@ -181,6 +198,9 @@ class ProjectList extends Component {
 __decorate([
     autobindthis
 ], ProjectList.prototype, "dragOverhandler", null);
+__decorate([
+    autobindthis
+], ProjectList.prototype, "dropHandler", null);
 __decorate([
     autobindthis
 ], ProjectList.prototype, "dragLeaveHandler", null);
